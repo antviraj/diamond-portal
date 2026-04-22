@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atelier — Diamond Order Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f5f1;
+    --bg-alt: #efece5;
+    --ink: #141414;
+    --ink-soft: #3a3a38;
+    --muted: #8a867d;
+    --line: #d9d4c7;
+    --line-soft: #e6e2d6;
+    --accent: #2d4a3e;
+    --accent-soft: #e8efe9;
+    --warn: #b4601a;
+    --warn-soft: #fbeede;
+    --danger: #a42c2c;
+    --danger-soft: #f5e1e1;
+    --ok: #2d6a4f;
+    --ok-soft: #dfeae2;
+    --shadow: 0 1px 0 rgba(20,20,20,0.04), 0 8px 24px -12px rgba(20,20,20,0.12);
+    --radius: 4px;
+    --sans: 'Inter Tight', system-ui, sans-serif;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+  button { cursor: pointer; background: none; border: none; }
+
+  /* LOGIN GATE */
+  .gate { position: fixed; inset: 0; z-index: 999; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .gate-box { max-width: 440px; width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 44px 40px; box-shadow: 0 24px 60px -12px rgba(20,20,20,0.15); }
+  .gate-mark { font-family: var(--serif); font-style: italic; font-size: 42px; letter-spacing: -0.02em; margin-bottom: 6px; font-weight: 400; }
+  .gate-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 0.25em; color: var(--muted); margin-bottom: 32px; }
+  .gate label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); display: block; margin-bottom: 6px; }
+  .gate input { width: 100%; padding: 11px 14px; border: 1px solid var(--line); background: var(--bg); border-radius: var(--radius); outline: none; font-size: 14px; letter-spacing: 0.05em; transition: border-color .15s; margin-bottom: 14px; }
+  .gate input:focus { border-color: var(--ink); }
+  .gate .error { color: var(--danger); font-size: 12px; margin-bottom: 12px; min-height: 18px; }
+  .gate button.enter { width: 100%; padding: 12px; background: var(--ink); color: var(--bg); border-radius: var(--radius); font-weight: 500; letter-spacing: 0.05em; transition: background .15s; }
+  .gate button.enter:hover { background: var(--accent); }
+  .gate-hint { margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--line); font-size: 11px; color: var(--muted); line-height: 1.6; }
+  .gate-hint code { font-family: var(--mono); background: var(--bg-alt); padding: 1px 6px; border-radius: 3px; font-size: 10px; }
+  .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); padding: 4px 10px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg); }
+  .sync-status .dot { width: 6px; height: 6px; border-radius: 99px; background: var(--muted); }
+  .sync-status.online .dot { background: var(--ok); animation: pulse 2s infinite; }
+  .sync-status.offline .dot { background: var(--warn); }
+  .sync-status.syncing .dot { background: var(--accent); animation: pulse 1s infinite; }
+  .sync-status.error .dot { background: var(--danger); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .app { display: none; grid-template-columns: 1fr; min-height: 100vh; }
+  .app.ready { display: grid; }
+
+  header.top { border-bottom: 1px solid var(--line); padding: 22px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; backdrop-filter: blur(8px); background: rgba(247,245,241,0.92); }
+  .brand { display: flex; align-items: baseline; gap: 14px; }
+  .brand .mark { font-family: var(--serif); font-weight: 400; font-size: 28px; letter-spacing: -0.02em; font-style: italic; }
+  .brand .sub { font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em; color: var(--muted); padding-left: 14px; border-left: 1px solid var(--line); }
+  .role-pill { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; padding: 4px 10px; border-radius: 99px; background: var(--ink); color: var(--bg); font-weight: 500; }
+  .role-pill.viewer { background: var(--muted); }
+  .top-actions { display: flex; gap: 8px; align-items: center; }
+
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--line); background: var(--bg-alt); }
+  .stat { padding: 20px 28px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+  .stat:last-child { border-right: none; }
+  .stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--muted); }
+  .stat .value { font-family: var(--serif); font-size: 36px; font-weight: 400; letter-spacing: -0.02em; line-height: 1; margin-top: 4px; }
+  .stat .value.warn { color: var(--warn); }
+  .stat .value.danger { color: var(--danger); }
+  .stat .hint { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
+
+  .toolbar { display: flex; gap: 10px; padding: 14px 40px; border-bottom: 1px solid var(--line); background: var(--bg); align-items: center; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 2px; padding: 3px; background: var(--bg-alt); border-radius: var(--radius); border: 1px solid var(--line-soft); }
+  .tab { padding: 7px 16px; font-size: 12px; font-weight: 500; letter-spacing: 0.02em; color: var(--muted); border-radius: 3px; transition: all .15s; }
+  .tab.active { background: var(--bg); color: var(--ink); box-shadow: var(--shadow); }
+  .tab:hover:not(.active) { color: var(--ink); }
+  .tab .count { display: inline-block; font-family: var(--mono); font-size: 10px; margin-left: 6px; padding: 1px 6px; background: var(--line-soft); border-radius: 99px; color: var(--ink-soft); }
+  .search { flex: 1; min-width: 220px; position: relative; }
+  .search input { width: 100%; padding: 9px 14px 9px 36px; border: 1px solid var(--line); background: var(--bg); border-radius: var(--radius); outline: none; transition: border-color .15s; }
+  .search input:focus { border-color: var(--ink); }
+  .search::before { content: ''; position: absolute; left: 12px; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a867d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>") center/contain no-repeat; }
+
+  .btn { padding: 9px 18px; font-size: 12px; font-weight: 500; letter-spacing: 0.02em; border: 1px solid var(--line); background: var(--bg); border-radius: var(--radius); transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { border-color: var(--ink); }
+  .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .btn.primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn.ghost { border-color: transparent; color: var(--muted); }
+  .btn.ghost:hover { color: var(--ink); background: var(--bg-alt); }
+  .btn.small { padding: 5px 10px; font-size: 11px; }
+  .btn.danger-ghost { border-color: transparent; color: var(--danger); }
+  .btn.danger-ghost:hover { background: var(--danger-soft); }
+  .btn[disabled], .btn.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+  .table-wrap { padding: 18px 40px 60px; overflow-x: auto; }
+  table.orders { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); }
+  .orders thead th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 600; color: var(--ink-soft); padding: 12px 14px; background: var(--bg-alt); border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; position: relative; vertical-align: middle; }
+  .orders thead th:not(:last-child) { border-right: 1px solid var(--line-soft); }
+  .th-inner { display: flex; align-items: center; gap: 6px; }
+  .th-inner .col-label { cursor: pointer; user-select: none; }
+  .th-inner .col-label:hover { color: var(--ink); }
+  .sort-indicator { font-family: var(--mono); font-size: 10px; color: var(--muted); min-width: 10px; }
+  .sort-indicator.active { color: var(--ink); }
+  .filter-btn { width: 18px; height: 18px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); transition: all .15s; margin-left: auto; }
+  .filter-btn:hover { background: var(--line-soft); color: var(--ink); }
+  .filter-btn.active { color: var(--accent); background: var(--accent-soft); }
+  .filter-btn svg { width: 11px; height: 11px; }
+  .orders tbody td { padding: 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  .orders tbody tr:last-child td { border-bottom: none; }
+  .orders tbody tr { transition: background .1s; }
+  .orders tbody tr:hover { background: var(--bg-alt); }
+  .orders tbody tr.clickable { cursor: pointer; }
+
+  .id-cell { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .cut-cell { font-family: var(--serif); font-weight: 500; font-size: 14px; font-style: italic; }
+  .shape-cell { display: flex; align-items: center; gap: 10px; }
+  .shape-svg { width: 32px; height: 32px; flex-shrink: 0; color: var(--ink-soft); }
+  .spec { font-size: 12px; color: var(--ink-soft); }
+  .spec-line { display: flex; gap: 4px; }
+  .spec-line .k { color: var(--muted); min-width: 42px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .spec-line .v { font-family: var(--mono); font-size: 11px; }
+  .attach-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; font-size: 10px; font-weight: 500; background: var(--bg-alt); border: 1px solid var(--line); border-radius: 99px; color: var(--ink-soft); font-family: var(--mono); }
+
+  .tag { display: inline-block; padding: 2px 8px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 99px; font-weight: 500; border: 1px solid var(--line); background: var(--bg-alt); color: var(--ink-soft); }
+  .tag.pair { background: #f0ecff; border-color: #d5c9f2; color: #4a2f8a; }
+  .tag.parcel { background: #fff3e0; border-color: #f0d5a8; color: #7a4a10; }
+  .tag.layout { background: #e6f0ec; border-color: #b8d5c8; color: #1f4d3a; }
+
+  .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 11px; font-weight: 500; border-radius: 99px; letter-spacing: 0.02em; }
+  .status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 99px; background: currentColor; }
+  .status-pending { color: var(--warn); background: var(--warn-soft); }
+  .status-active { color: var(--accent); background: var(--accent-soft); }
+  .status-completed { color: var(--ok); background: var(--ok-soft); }
+  .status-overdue { color: var(--danger); background: var(--danger-soft); }
+
+  .deadline { font-family: var(--mono); font-size: 11px; display: flex; flex-direction: column; gap: 2px; }
+  .deadline .days { font-size: 16px; font-weight: 500; letter-spacing: -0.02em; }
+  .deadline .days.warn { color: var(--warn); }
+  .deadline .days.danger { color: var(--danger); }
+  .deadline .date { color: var(--muted); font-size: 10px; }
+
+  .row-actions { display: flex; gap: 4px; }
+  .row-actions button { padding: 5px; border-radius: 3px; color: var(--muted); transition: all .15s; }
+  .row-actions button:hover { background: var(--bg); color: var(--ink); }
+  .row-actions svg { width: 14px; height: 14px; }
+
+  .empty-row td { text-align: center; padding: 80px 40px; color: var(--muted); font-family: var(--serif); font-style: italic; font-size: 18px; }
+  .empty-row .hint { font-family: var(--sans); font-size: 12px; font-style: normal; margin-top: 8px; letter-spacing: 0.05em; }
+
+  .filter-pop { position: absolute; top: calc(100% + 4px); left: 0; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 12px 40px -8px rgba(20,20,20,0.25); z-index: 100; min-width: 240px; max-width: 280px; padding: 10px; font-family: var(--sans); text-transform: none; letter-spacing: normal; font-weight: 400; }
+  .filter-pop .fp-search { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg-alt); outline: none; font-size: 12px; margin-bottom: 8px; }
+  .filter-pop .fp-search:focus { border-color: var(--ink); background: var(--bg); }
+  .fp-sort { display: flex; gap: 4px; margin-bottom: 8px; }
+  .fp-sort button { flex: 1; padding: 6px; font-size: 11px; border: 1px solid var(--line); border-radius: 3px; color: var(--ink-soft); transition: all .15s; }
+  .fp-sort button:hover, .fp-sort button.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .fp-list { max-height: 220px; overflow-y: auto; border: 1px solid var(--line-soft); border-radius: 3px; margin-bottom: 8px; }
+  .fp-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px; border-bottom: 1px solid var(--line-soft); cursor: pointer; user-select: none; }
+  .fp-item:last-child { border-bottom: none; }
+  .fp-item:hover { background: var(--bg-alt); }
+  .fp-item input { margin: 0; accent-color: var(--ink); }
+  .fp-item .ct { color: var(--muted); font-size: 10px; margin-left: auto; font-family: var(--mono); }
+  .fp-range { display: flex; gap: 6px; margin-bottom: 8px; }
+  .fp-range input { flex: 1; padding: 6px 8px; font-size: 11px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg-alt); outline: none; }
+  .fp-range input:focus { border-color: var(--ink); background: var(--bg); }
+  .fp-actions { display: flex; gap: 6px; }
+  .fp-actions button { flex: 1; padding: 6px; font-size: 11px; border: 1px solid var(--line); border-radius: 3px; transition: all .15s; }
+  .fp-actions .apply { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .fp-actions .clear { color: var(--ink-soft); }
+  .fp-actions button:hover { opacity: 0.85; }
+
+  .backdrop { position: fixed; inset: 0; background: rgba(20,20,20,0.4); backdrop-filter: blur(4px); z-index: 200; display: none; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; }
+  .backdrop.open { display: flex; }
+  .modal { background: var(--bg); border-radius: var(--radius); width: 100%; max-width: 820px; box-shadow: 0 24px 60px -12px rgba(20,20,20,0.3); border: 1px solid var(--line); animation: rise .25s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  .modal-head { padding: 24px 32px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; justify-content: space-between; }
+  .modal-head h2 { font-family: var(--serif); font-weight: 400; font-size: 26px; letter-spacing: -0.02em; font-style: italic; }
+  .modal-head .sub { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.2em; }
+  .modal-body { padding: 24px 32px; }
+  .modal-foot { padding: 16px 32px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--bg-alt); border-radius: 0 0 var(--radius) var(--radius); }
+
+  .form-section { margin-bottom: 24px; }
+  .form-section h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--muted); font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); font-weight: 500; }
+  .field .hint { font-size: 10px; color: var(--muted); margin-top: 2px; font-style: italic; }
+  .field input, .field select, .field textarea { padding: 9px 11px; font-size: 13px; border: 1px solid var(--line); background: var(--bg); border-radius: var(--radius); outline: none; transition: border-color .15s; font-family: inherit; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--ink); }
+  .field textarea { resize: vertical; min-height: 70px; font-family: inherit; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 6px 12px; font-size: 11px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg); transition: all .15s; cursor: pointer; user-select: none; }
+  .chip:hover { border-color: var(--ink-soft); }
+  .chip.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  .shape-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+  .shape-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 6px; text-align: center; cursor: pointer; transition: all .15s; background: var(--bg); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .shape-card:hover { border-color: var(--ink-soft); }
+  .shape-card.active { border-color: var(--ink); background: var(--bg-alt); }
+  .shape-card svg { width: 34px; height: 34px; color: var(--ink-soft); }
+  .shape-card.active svg { color: var(--ink); }
+  .shape-card .name { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; }
+  .shape-card.active .name { color: var(--ink); }
+
+  .req-type-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .req-card { padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; transition: all .15s; text-align: center; background: var(--bg); }
+  .req-card:hover { border-color: var(--ink-soft); }
+  .req-card.active { border-color: var(--ink); background: var(--bg-alt); }
+  .req-card .title { font-family: var(--serif); font-size: 15px; font-style: italic; font-weight: 500; }
+  .req-card .desc { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  .attach-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .attach-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 12px; }
+  .attach-icon { width: 28px; height: 28px; border-radius: 3px; background: var(--bg-alt); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 9px; font-weight: 600; color: var(--ink-soft); flex-shrink: 0; }
+  .attach-icon.pdf { background: #fde4e4; color: #8a2424; }
+  .attach-icon.img { background: #e4eefd; color: #1e3a6b; }
+  .attach-icon.sheet { background: #e4f4e9; color: #1f5e33; }
+  .attach-icon.link { background: #f2ece4; color: #6b4a1e; }
+  .attach-name { flex: 1; word-break: break-all; }
+  .attach-name a { color: var(--ink); text-decoration: none; }
+  .attach-name a:hover { text-decoration: underline; }
+  .attach-size { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .attach-remove { color: var(--muted); padding: 4px; border-radius: 3px; transition: all .15s; }
+  .attach-remove:hover { color: var(--danger); background: var(--danger-soft); }
+  .attach-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .attach-actions .btn { flex: 1; min-width: 140px; justify-content: center; }
+  .link-input-row { display: flex; gap: 8px; margin-top: 10px; padding: 10px; background: var(--bg-alt); border-radius: var(--radius); border: 1px solid var(--line-soft); }
+  .link-input-row input { flex: 1; padding: 7px 10px; font-size: 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg); outline: none; }
+  .link-input-row input:focus { border-color: var(--ink); }
+  .link-input-row button { padding: 7px 14px; font-size: 11px; }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .detail-block h4 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--muted); font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); }
+  .detail-row { display: flex; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--line-soft); }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row .k { color: var(--muted); min-width: 130px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .detail-row .v { flex: 1; font-family: var(--mono); font-size: 12px; }
+  .detail-row .v.notes { font-family: var(--sans); font-size: 13px; }
+  .detail-row .v.prose { font-family: var(--serif); font-size: 15px; font-style: italic; font-weight: 500; }
+  .detail-shape-hero { display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--bg-alt); border-radius: var(--radius); margin-bottom: 18px; border: 1px solid var(--line-soft); }
+  .detail-shape-hero svg { width: 64px; height: 64px; color: var(--ink); flex-shrink: 0; }
+  .detail-shape-hero .meta .cut-name { font-family: var(--serif); font-size: 24px; font-style: italic; font-weight: 500; letter-spacing: -0.01em; }
+  .detail-shape-hero .meta .cut-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; margin-top: 4px; }
+
+  .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+  .toast { padding: 12px 18px; background: var(--ink); color: var(--bg); border-radius: var(--radius); font-size: 12px; letter-spacing: 0.02em; box-shadow: 0 12px 32px -6px rgba(20,20,20,0.3); animation: slidein .25s ease-out; max-width: 320px; }
+  .toast.danger { background: var(--danger); }
+  .toast.warn { background: var(--warn); }
+  @keyframes slidein { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+
+  .mono { font-family: var(--mono); }
+  .serif { font-family: var(--serif); }
+
+  .config-bar { padding: 10px 40px; border-bottom: 1px solid var(--line); background: #fff9e8; font-size: 12px; color: #7a4a10; display: flex; justify-content: space-between; align-items: center; }
+  .config-bar code { font-family: var(--mono); background: rgba(0,0,0,0.05); padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+
+  @media (max-width: 900px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stat:nth-child(2n) { border-right: none; }
+    .stat { border-bottom: 1px solid var(--line); }
+    header.top, .toolbar, .table-wrap, .config-bar { padding-left: 18px; padding-right: 18px; }
+    .grid-2, .grid-3, .grid-4, .detail-grid, .req-type-row { grid-template-columns: 1fr; }
+    .brand .sub { display: none; }
+    .shape-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN GATE -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div class="gate-mark">Atelier</div>
+    <div class="gate-sub">Diamond Order Management</div>
+    <label>Passcode</label>
+    <input type="password" id="gatePass" autofocus placeholder="Enter passcode" />
+    <div class="error" id="gateError"></div>
+    <button class="enter" id="gateEnter">Enter</button>
+    <div class="gate-hint">
+      <strong>Admin</strong> can add, edit, and delete orders.<br>
+      <strong>Viewer</strong> can browse, filter, search, and mark pieces complete — no deleting.<br><br>
+      Default passcodes (change at top of the HTML file):<br>
+      Admin: <code>admin2026</code> · Viewer: <code>view2026</code>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">
+      <div class="mark">Atelier</div>
+      <div class="sub">Diamond Order Management</div>
+    </div>
+    <div class="top-actions">
+      <span class="sync-status" id="syncStatus" title="Sync status"><span class="dot"></span><span id="syncText">Local</span></span>
+      <span class="role-pill" id="roleLabel">ADMIN</span>
+      <button class="btn ghost small" id="refreshBtn" title="Refresh from Google Sheet">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh
+      </button>
+      <button class="btn ghost small" id="exportBtn" title="Export as JSON backup">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Backup
+      </button>
+      <button class="btn primary admin-only" id="addOrderBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Order
+      </button>
+      <button class="btn ghost small" id="logoutBtn" title="Sign out">Sign out</button>
+    </div>
+  </header>
+
+  <div class="config-bar" id="configBar" style="display:none">
+    ⚠ Google Sheet not connected yet. Data is saved locally in this browser only. Paste your Apps Script URL into <code>SHEETS_API_URL</code> at the top of the HTML file.
+  </div>
+
+  <section class="stats" id="statsBand"></section>
+
+  <div class="toolbar">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="all">All <span class="count" id="count-all">0</span></button>
+      <button class="tab" data-tab="pending">Pending <span class="count" id="count-pending">0</span></button>
+      <button class="tab" data-tab="active">In Progress <span class="count" id="count-active">0</span></button>
+      <button class="tab" data-tab="completed">Completed <span class="count" id="count-completed">0</span></button>
+      <button class="tab" data-tab="overdue">Overdue <span class="count" id="count-overdue">0</span></button>
+    </div>
+    <div class="search">
+      <input id="globalSearch" type="text" placeholder="Search across all orders — client, cut, notes, ID…" />
+    </div>
+    <button class="btn ghost small" id="clearFilters">Clear filters</button>
+  </div>
+
+  <div class="table-wrap">
+    <table class="orders" id="ordersTable">
+      <thead><tr id="headRow"></tr></thead>
+      <tbody id="ordersBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- FORM MODAL -->
+<div class="backdrop" id="formBackdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2 id="formTitle">New Order</h2><div class="sub">Diamond Specification</div></div>
+      <button class="btn ghost small" id="closeForm">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="orderForm">
+        <div class="form-section">
+          <h3>Client & Identity</h3>
+          <div class="grid-3">
+            <div class="field"><label>Client / Buyer</label><input type="text" name="client" placeholder="e.g. Rosenthal & Sons" required /></div>
+            <div class="field"><label>Reference</label><input type="text" name="reference" placeholder="PO, memo or internal ref" /></div>
+            <div class="field"><label>Priority</label><select name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="rush">Rush</option></select></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Requirement Type</h3>
+          <div class="req-type-row" id="reqTypeRow">
+            <div class="req-card active" data-type="single"><div class="title">Single</div><div class="desc">One stone</div></div>
+            <div class="req-card" data-type="pair"><div class="title">Matching Pair</div><div class="desc">Earrings, studs</div></div>
+            <div class="req-card" data-type="parcel"><div class="title">Parcel</div><div class="desc">Loose lot / melee</div></div>
+            <div class="req-card" data-type="layout"><div class="title">Layout</div><div class="desc">Necklace / suite</div></div>
+          </div>
+          <input type="hidden" name="reqType" value="single" />
+        </div>
+        <div class="form-section">
+          <h3>Shape / Cut</h3>
+          <div class="shape-grid" id="shapeGrid"></div>
+          <input type="hidden" name="cut" value="" required />
+          <div class="grid-2" style="margin-top:12px">
+            <div class="field"><label>Cut Grade</label><select name="cutGrade"><option value="">—</option><option>Excellent</option><option>Very Good</option><option>Good</option><option>Fair</option><option>Any</option></select></div>
+            <div class="field"><label>Polish / Symmetry</label><select name="polishSym"><option value="">—</option><option>Excellent / Excellent</option><option>Excellent / Very Good</option><option>Very Good / Very Good</option><option>Any</option></select></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Size, Weight & Count</h3>
+          <div class="grid-4">
+            <div class="field"><label>Size (ct, each)</label><input type="text" name="size" placeholder="e.g. 0.90 – 1.20" /><div class="hint">Per stone. Range accepted.</div></div>
+            <div class="field"><label>Total Weight Limit (ct)</label><input type="number" step="0.01" name="weightLimit" placeholder="e.g. 25.00" /></div>
+            <div class="field"><label>Pieces / Count</label><input type="number" name="pieces" placeholder="e.g. 42" /></div>
+            <div class="field"><label>Tolerance</label><input type="text" name="tolerance" placeholder="± variance" /></div>
+          </div>
+          <div class="grid-3" style="margin-top:10px">
+            <div class="field"><label>Length (mm)</label><input type="text" name="dimL" placeholder="e.g. 6.40" /></div>
+            <div class="field"><label>Width (mm)</label><input type="text" name="dimW" placeholder="e.g. 6.42" /></div>
+            <div class="field"><label>Depth (mm)</label><input type="text" name="dimD" placeholder="e.g. 3.95" /></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Color & Clarity</h3>
+          <div class="grid-2">
+            <div class="field">
+              <label>Color Range</label>
+              <div class="chip-row" data-multichip="color">
+                <div class="chip" data-v="D">D</div><div class="chip" data-v="E">E</div><div class="chip" data-v="F">F</div><div class="chip" data-v="G">G</div><div class="chip" data-v="H">H</div><div class="chip" data-v="I">I</div><div class="chip" data-v="J">J</div><div class="chip" data-v="K">K</div><div class="chip" data-v="L-M">L–M</div><div class="chip" data-v="Fancy">Fancy</div>
+              </div>
+              <input type="hidden" name="color" value="" />
+            </div>
+            <div class="field">
+              <label>Clarity Range</label>
+              <div class="chip-row" data-multichip="clarity">
+                <div class="chip" data-v="FL">FL</div><div class="chip" data-v="IF">IF</div><div class="chip" data-v="VVS1">VVS1</div><div class="chip" data-v="VVS2">VVS2</div><div class="chip" data-v="VS1">VS1</div><div class="chip" data-v="VS2">VS2</div><div class="chip" data-v="SI1">SI1</div><div class="chip" data-v="SI2">SI2</div><div class="chip" data-v="I1">I1</div><div class="chip" data-v="I2">I2</div>
+              </div>
+              <input type="hidden" name="clarity" value="" />
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Fluorescence & Other Conditions</h3>
+          <div class="grid-2">
+            <div class="field"><label>Fluorescence</label><select name="fluor"><option value="">—</option><option>None only</option><option>None to Faint</option><option>None to Medium</option><option>Any</option></select></div>
+            <div class="field"><label>Certificate</label><select name="cert"><option value="">—</option><option>GIA</option><option>IGI</option><option>HRD</option><option>AGS</option><option>Non-cert accepted</option><option>Any</option></select></div>
+          </div>
+          <div class="field full" style="margin-top:10px"><label>Additional Conditions / Notes</label><textarea name="notes" rows="3" placeholder="e.g. Milky / brown / green tint not acceptable. Must eye-clean. Layout must graduate from 0.30ct to 1.00ct centre…"></textarea></div>
+        </div>
+        <div class="form-section">
+          <h3>Supporting Files & Links</h3>
+          <div class="attach-list" id="attachList"></div>
+          <div class="attach-actions">
+            <button type="button" class="btn small" id="attachFileBtn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Attach PDF / Image</button>
+            <button type="button" class="btn small" id="attachLinkBtn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Add Link (Google Sheet / URL)</button>
+          </div>
+          <input type="file" id="attachFileInput" accept="application/pdf,image/*" multiple style="display:none" />
+          <div class="link-input-row" id="linkInputRow" style="display:none">
+            <input type="text" id="linkLabel" placeholder="Label (e.g. Layout sheet)" />
+            <input type="url" id="linkUrl" placeholder="https://docs.google.com/..." />
+            <button type="button" class="btn primary small" id="linkAddBtn">Add</button>
+            <button type="button" class="btn small" id="linkCancelBtn">Cancel</button>
+          </div>
+          <div class="hint" style="font-size:10px;color:var(--muted);margin-top:8px;font-style:italic">Files under 2 MB are stored inside the order. For larger files or docs you'll update often, add as a link instead.</div>
+        </div>
+        <div class="form-section">
+          <h3>Timeline</h3>
+          <div class="grid-3">
+            <div class="field"><label>Start Date</label><input type="date" name="startDate" required /></div>
+            <div class="field"><label>Deadline / Completion Date</label><input type="date" name="endDate" required /></div>
+            <div class="field"><label>Status</label><select name="status"><option value="pending">Pending</option><option value="active">In Progress</option><option value="completed">Completed</option></select></div>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn danger-ghost small" id="deleteOrderBtn" style="display:none">Delete Order</button>
+      <div style="display:flex; gap:8px; margin-left:auto">
+        <button class="btn" id="cancelForm">Cancel</button>
+        <button class="btn primary" id="saveOrder">Save Order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="backdrop" id="detailBackdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2 id="detailTitle">Order Details</h2><div class="sub" id="detailSub">—</div></div>
+      <button class="btn ghost small" id="closeDetail">✕</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-foot">
+      <button class="btn danger-ghost small admin-only" id="detailDelete">Delete</button>
+      <div style="display:flex; gap:8px; margin-left:auto">
+        <button class="btn" id="detailToggleStatus">Mark Complete</button>
+        <button class="btn primary admin-only" id="detailEdit">Edit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ============================================================
+   ★★★  CONFIGURATION — EDIT THESE THREE LINES ★★★
+============================================================ */
+const ADMIN_PASS  = '2026admin';   // change to your own admin password
+const VIEWER_PASS = 'view2026';    // change to your own viewer password
+const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwPh3-om5VIdcPCKroQJqXVxdyDfm8gG8RSI_vEfMkV32YDkNBm803FdNkJkx4G0AlW/exec';         // paste your Google Apps Script Web App URL here (see setup guide)
+/* ============================================================ */
+
+const SHAPES = [
+  { key: 'Round Brilliant', short: 'Round',     svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><circle cx="32" cy="32" r="24"/><circle cx="32" cy="32" r="16"/><path d="M32 8v16M32 40v16M8 32h16M40 32h16M15 15l11 11M49 15l-11 11M15 49l11-11M49 49l-11-11"/></svg>' },
+  { key: 'Princess',        short: 'Princess',  svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="10" y="10" width="44" height="44"/><path d="M10 10l22 22 22-22M10 54l22-22 22 22M32 10v44M10 32h44"/></svg>' },
+  { key: 'Emerald',         short: 'Emerald',   svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M18 8h28l10 10v28l-10 10H18L8 46V18z"/><path d="M22 16h20l6 6v20l-6 6H22l-6-6V22z"/><path d="M26 24h12M26 32h12M26 40h12"/></svg>' },
+  { key: 'Asscher',         short: 'Asscher',   svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M20 8h24l12 12v24l-12 12H20L8 44V20z"/><path d="M25 17h14l8 8v14l-8 8H25l-8-8V25z"/><path d="M30 26h4v12h-4z M26 30h12v4H26z"/></svg>' },
+  { key: 'Cushion',         short: 'Cushion',   svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M14 8h36c3.3 0 6 2.7 6 6v36c0 3.3-2.7 6-6 6H14c-3.3 0-6-2.7-6-6V14c0-3.3 2.7-6 6-6z"/><path d="M20 14h24c3.3 0 6 2.7 6 6v24c0 3.3-2.7 6-6 6H20c-3.3 0-6-2.7-6-6V20c0-3.3 2.7-6 6-6z"/><circle cx="32" cy="32" r="4"/></svg>' },
+  { key: 'Radiant',         short: 'Radiant',   svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M18 8h28l10 10v28l-10 10H18L8 46V18z"/><path d="M8 18L56 46M56 18L8 46M32 8v48M8 32h48"/></svg>' },
+  { key: 'Oval',            short: 'Oval',      svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><ellipse cx="32" cy="32" rx="22" ry="15"/><ellipse cx="32" cy="32" rx="14" ry="9"/><path d="M32 17v30M10 32h44"/></svg>' },
+  { key: 'Pear',            short: 'Pear',      svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M32 6C20 18 14 30 14 40a18 18 0 0036 0c0-10-6-22-18-34z"/><path d="M32 18c-6 8-10 16-10 22a10 10 0 0020 0c0-6-4-14-10-22z"/><path d="M32 6v52"/></svg>' },
+  { key: 'Marquise',        short: 'Marquise',  svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M8 32c8-14 16-20 24-20s16 6 24 20c-8 14-16 20-24 20S16 46 8 32z"/><path d="M16 32c6-10 10-14 16-14s10 4 16 14c-6 10-10 14-16 14s-10-4-16-14z"/><path d="M8 32h48"/></svg>' },
+  { key: 'Heart',           short: 'Heart',     svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M32 54C16 42 8 32 8 21a11 11 0 0120-6 11 11 0 0120 6c0 11-8 21-24 33z"/><path d="M32 44c-10-8-16-14-16-22a6 6 0 0112-2 6 6 0 0112 2c0 8-6 14-16 22z"/><path d="M32 15v39"/></svg>' },
+  { key: 'Baguette',        short: 'Baguette',  svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="16" y="12" width="32" height="40"/><path d="M16 12l8 8v24l-8 8M48 12l-8 8v24l8 8"/><path d="M24 20h16M24 44h16"/></svg>' },
+  { key: 'Trilliant',       short: 'Trilliant', svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M32 10L56 52H8z"/><path d="M32 22L46 46H18z"/><path d="M32 10v42M8 52l24-30 24 30"/></svg>' },
+  { key: 'Rose Cut',        short: 'Rose',      svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><circle cx="32" cy="32" r="22"/><path d="M32 10l6 14 14 0-11 9 4 14-13-8-13 8 4-14-11-9 14 0z"/></svg>' },
+  { key: 'Old European',    short: 'O. Euro',   svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="10"/><path d="M32 9v14M32 41v14M9 32h14M41 32h14"/></svg>' },
+  { key: 'Old Mine',        short: 'O. Mine',   svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M16 12h32c2 0 4 2 4 4v32c0 2-2 4-4 4H16c-2 0-4-2-4-4V16c0-2 2-4 4-4z"/><circle cx="32" cy="32" r="8"/><path d="M12 12l40 40M52 12L12 52"/></svg>' },
+  { key: 'Other',           short: 'Other',     svg: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><circle cx="32" cy="32" r="22" stroke-dasharray="3 3"/><text x="32" y="38" text-anchor="middle" font-size="16" fill="currentColor" stroke="none" font-family="Georgia" font-style="italic">?</text></svg>' }
+];
+const shapeByKey = Object.fromEntries(SHAPES.map(s => [s.key, s]));
+function getShapeSvg(cutKey) { return (shapeByKey[cutKey] || shapeByKey['Other']).svg; }
+
+/* STATE */
+const LOCAL_KEY = 'atelier-diamond-orders-v3';
+const SESSION_KEY = 'atelier-role';
+let orders = [];
+let currentTab = 'all';
+let globalQuery = '';
+let sortState = { col: 'endDate', dir: 'asc' };
+let columnFilters = {};
+let editingId = null;
+let activeFilterPop = null;
+let role = null;
+let pendingAttachments = [];
+let syncEnabled = !!SHEETS_API_URL;
+
+const columns = [
+  { key: 'id', label: 'ID', type: 'set', width: '70px' },
+  { key: 'client', label: 'Client', type: 'set' },
+  { key: 'cut', label: 'Cut', type: 'set' },
+  { key: 'size', label: 'Size / Dim', type: 'set' },
+  { key: 'spec', label: 'Color · Clarity', type: 'set' },
+  { key: 'weight', label: 'Wt / Pcs', type: 'range' },
+  { key: 'fluor', label: 'Fluor', type: 'set' },
+  { key: 'reqType', label: 'Req Type', type: 'set' },
+  { key: 'startDate', label: 'Start', type: 'range-date' },
+  { key: 'endDate', label: 'Deadline', type: 'range-date' },
+  { key: 'daysLeft', label: 'Days', type: 'range' },
+  { key: 'status', label: 'Status', type: 'set' },
+  { key: 'actions', label: '', type: null }
+];
+
+/* ============================================================
+   GOOGLE SHEETS SYNC LAYER
+   ============================================================ */
+function setSyncStatus(state, text) {
+  const el = document.getElementById('syncStatus');
+  const txt = document.getElementById('syncText');
+  el.className = 'sync-status ' + state;
+  txt.textContent = text;
+}
+
+async function sheetsRequest(action, payload = {}) {
+  if (!syncEnabled) throw new Error('Sync disabled');
+  const body = JSON.stringify({ action, ...payload });
+  const res = await fetch(SHEETS_API_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: body
+  });
+  if (!res.ok) throw new Error('Network error ' + res.status);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Unknown error');
+  return data;
+}
+
+async function loadFromSheet(showToast = false) {
+  if (!syncEnabled) { loadLocal(); return; }
+  setSyncStatus('syncing', 'Syncing…');
+  try {
+    const data = await sheetsRequest('list');
+    orders = data.orders || [];
+    saveLocal();
+    setSyncStatus('online', 'Synced');
+    if (showToast) toast('Refreshed from Google Sheet');
+    render();
+  } catch (e) {
+    console.error(e);
+    setSyncStatus('error', 'Offline');
+    toast('Could not reach Google Sheet — showing local data.', 'warn');
+    loadLocal();
+    render();
+  }
+}
+
+async function pushToSheet(action, payload) {
+  if (!syncEnabled) return;
+  setSyncStatus('syncing', 'Saving…');
+  try {
+    await sheetsRequest(action, payload);
+    setSyncStatus('online', 'Synced');
+  } catch (e) {
+    console.error(e);
+    setSyncStatus('error', 'Offline');
+    toast('Save to Google Sheet failed — saved locally.', 'warn');
+  }
+}
+
+/* LOCAL CACHE */
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (raw) { orders = JSON.parse(raw); return; }
+  } catch(e) {}
+  orders = seedSampleData();
+  saveLocal();
+}
+function saveLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(orders)); }
+  catch(e) { toast('Browser storage full — export a backup and clear old orders.', 'danger'); }
+}
+function seedSampleData() {
+  const today = new Date();
+  const offset = d => { const x = new Date(today); x.setDate(x.getDate()+d); return x.toISOString().slice(0,10); };
+  return [
+    { id: 'D-0001', client: 'Rosenthal & Sons', reference: 'PO-4412', priority: 'high', reqType: 'layout', cut: 'Round Brilliant', cutGrade: 'Excellent', polishSym: 'Excellent / Excellent', size: '0.30 – 1.00', weightLimit: 18.5, pieces: 37, tolerance: '±0.02', dimL: '', dimW: '', dimD: '', color: 'D,E,F', clarity: 'VVS1,VVS2,VS1', fluor: 'None only', cert: 'GIA', notes: 'Graduated necklace layout. Centre stone 1.00ct ±0.03.', startDate: offset(-4), endDate: offset(18), status: 'active', attachments: [{id:'a1', type:'link', name:'Layout sheet', url:'https://docs.google.com/spreadsheets/'}], createdAt: Date.now() - 86400000*4 },
+    { id: 'D-0002', client: 'Vàra Jewels, Antwerp', reference: 'MEMO-V23', priority: 'rush', reqType: 'pair', cut: 'Emerald', cutGrade: 'Very Good', polishSym: 'Excellent / Very Good', size: '1.50 – 1.55', weightLimit: 3.1, pieces: 2, tolerance: 'exact match', dimL: '7.20', dimW: '5.40', dimD: '3.30', color: 'E,F', clarity: 'VS1,VS2', fluor: 'None to Faint', cert: 'GIA', notes: 'Earring pair. L/W ratio 1.33.', startDate: offset(-2), endDate: offset(5), status: 'active', attachments: [], createdAt: Date.now() - 86400000*2 },
+    { id: 'D-0003', client: 'Heirloom Studio', reference: '', priority: 'normal', reqType: 'single', cut: 'Oval', cutGrade: 'Excellent', polishSym: '', size: '2.00 – 2.20', weightLimit: 2.2, pieces: 1, tolerance: '', dimL: '9.10', dimW: '6.80', dimD: '4.20', color: 'G,H', clarity: 'VS2,SI1', fluor: 'None to Medium', cert: 'IGI', notes: 'L/W ratio 1.35 preferred. No bow-tie.', startDate: offset(-10), endDate: offset(-2), status: 'active', attachments: [], createdAt: Date.now() - 86400000*10 },
+    { id: 'D-0004', client: 'Saraf Diamantaire', reference: 'SD-99', priority: 'normal', reqType: 'parcel', cut: 'Round Brilliant', cutGrade: 'Any', polishSym: '', size: '0.01 – 0.05', weightLimit: 50, pieces: 2200, tolerance: '', dimL: '', dimW: '', dimD: '', color: 'G,H,I', clarity: 'VS2,SI1,SI2', fluor: 'Any', cert: 'Non-cert accepted', notes: 'Melee parcel. White eye, no milky or brown.', startDate: offset(-1), endDate: offset(30), status: 'pending', attachments: [], createdAt: Date.now() - 86400000 },
+    { id: 'D-0005', client: 'Maison Lior, Paris', reference: 'ML-2026-03', priority: 'high', reqType: 'single', cut: 'Cushion', cutGrade: 'Very Good', polishSym: '', size: '3.00 – 3.50', weightLimit: 3.5, pieces: 1, tolerance: '', dimL: '8.60', dimW: '8.60', dimD: '5.30', color: 'D,E', clarity: 'VVS2,VS1', fluor: 'None only', cert: 'GIA', notes: 'Square cushion preferred.', startDate: offset(-30), endDate: offset(-5), status: 'completed', attachments: [], createdAt: Date.now() - 86400000*30 }
+  ];
+}
+
+/* GATE */
+function tryLogin() {
+  const input = document.getElementById('gatePass').value.trim();
+  const err = document.getElementById('gateError');
+  if (input === ADMIN_PASS) role = 'admin';
+  else if (input === VIEWER_PASS) role = 'viewer';
+  else { err.textContent = 'Incorrect passcode.'; return; }
+  sessionStorage.setItem(SESSION_KEY, role);
+  enterApp();
+}
+function enterApp() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').classList.add('ready');
+  document.getElementById('roleLabel').textContent = role.toUpperCase();
+  document.getElementById('roleLabel').classList.toggle('viewer', role === 'viewer');
+  document.querySelectorAll('.admin-only').forEach(el => { el.style.display = role === 'admin' ? '' : 'none'; });
+  document.getElementById('configBar').style.display = syncEnabled ? 'none' : 'flex';
+  if (syncEnabled) {
+    setSyncStatus('syncing', 'Connecting…');
+    loadFromSheet();
+  } else {
+    setSyncStatus('offline', 'Local only');
+    loadLocal();
+    render();
+  }
+  // Periodic refresh every 60s if sync enabled
+  if (syncEnabled) {
+    setInterval(() => { if (!document.hidden) loadFromSheet(false); }, 60000);
+  }
+}
+function logout() { sessionStorage.removeItem(SESSION_KEY); location.reload(); }
+
+/* HELPERS */
+function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+function daysBetween(from, to) { if (!from || !to) return null; const a = new Date(from); a.setHours(0,0,0,0); const b = new Date(to); b.setHours(0,0,0,0); return Math.round((b - a) / 86400000); }
+function getDaysLeft(o) { if (o.status === 'completed') return null; const today = new Date(); today.setHours(0,0,0,0); return daysBetween(today, o.endDate); }
+function isOverdue(o) { if (o.status === 'completed') return false; const dl = getDaysLeft(o); return dl !== null && dl < 0; }
+function nextId() {
+  const max = orders.reduce((m, o) => { const n = parseInt((o.id||'').replace(/\D/g,'')) || 0; return Math.max(m, n); }, 0);
+  return 'D-' + String(max+1).padStart(4, '0');
+}
+function toast(msg, kind) {
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast' + (kind ? ' ' + kind : '');
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(()=> { t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 300); }, 2800);
+}
+function fileSize(n) { if (n < 1024) return n + ' B'; if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB'; return (n/1024/1024).toFixed(2) + ' MB'; }
+function attachIconClass(a) {
+  if (a.type === 'link') { if (a.url && /docs\.google\.com\/spreadsheets/.test(a.url)) return 'sheet'; return 'link'; }
+  if (a.mime && a.mime.startsWith('image/')) return 'img';
+  if (a.mime === 'application/pdf') return 'pdf';
+  return 'link';
+}
+function attachLabel(a) {
+  if (a.type === 'link') { if (/docs\.google\.com\/spreadsheets/.test(a.url)) return 'SHT'; if (/docs\.google\.com\/document/.test(a.url)) return 'DOC'; return 'URL'; }
+  if (a.mime === 'application/pdf') return 'PDF';
+  if (a.mime && a.mime.startsWith('image/')) return 'IMG';
+  return 'FIL';
+}
+
+/* FILTER / SORT */
+function getVisibleOrders() {
+  let list = [...orders];
+  if (currentTab === 'pending') list = list.filter(o => o.status === 'pending');
+  else if (currentTab === 'active') list = list.filter(o => o.status === 'active');
+  else if (currentTab === 'completed') list = list.filter(o => o.status === 'completed');
+  else if (currentTab === 'overdue') list = list.filter(isOverdue);
+
+  if (globalQuery) {
+    const q = globalQuery.toLowerCase();
+    list = list.filter(o => JSON.stringify({...o, attachments: (o.attachments||[]).map(a=>a.name||a.url)}).toLowerCase().includes(q));
+  }
+  for (const [col, f] of Object.entries(columnFilters)) {
+    if (!f) continue;
+    if (f.type === 'set' && f.values && f.values.size) list = list.filter(o => f.values.has(getColCellKey(o, col)));
+    else if (f.type === 'range') list = list.filter(o => { const v = getColSortVal(o, col); if (v == null) return false; if (f.min != null && v < f.min) return false; if (f.max != null && v > f.max) return false; return true; });
+    else if (f.type === 'range-date') list = list.filter(o => { const v = o[col]; if (!v) return false; if (f.min && v < f.min) return false; if (f.max && v > f.max) return false; return true; });
+  }
+  if (sortState.col) {
+    list.sort((a, b) => {
+      const va = getColSortVal(a, sortState.col);
+      const vb = getColSortVal(b, sortState.col);
+      if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1;
+      if (va < vb) return sortState.dir === 'asc' ? -1 : 1;
+      if (va > vb) return sortState.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+  return list;
+}
+function getColCellKey(o, col) {
+  switch(col) {
+    case 'id': return o.id || '';
+    case 'client': return o.client || '';
+    case 'cut': return o.cut || '';
+    case 'size': return o.size || '';
+    case 'spec': return `${o.color||''} / ${o.clarity||''}`;
+    case 'fluor': return o.fluor || '';
+    case 'reqType': return o.reqType || '';
+    case 'status': return isOverdue(o) ? 'overdue' : (o.status || '');
+    case 'startDate': return o.startDate || '';
+    case 'endDate': return o.endDate || '';
+    default: return '';
+  }
+}
+function getColSortVal(o, col) {
+  switch(col) {
+    case 'id': return o.id || '';
+    case 'client': return (o.client||'').toLowerCase();
+    case 'cut': return o.cut || '';
+    case 'size': return o.size || '';
+    case 'spec': return (o.color||'') + (o.clarity||'');
+    case 'weight': return parseFloat(o.weightLimit) || 0;
+    case 'fluor': return o.fluor || '';
+    case 'reqType': return o.reqType || '';
+    case 'startDate': return o.startDate || '';
+    case 'endDate': return o.endDate || '';
+    case 'daysLeft': { const d = getDaysLeft(o); return d == null ? Infinity : d; }
+    case 'status': return o.status || '';
+    default: return '';
+  }
+}
+
+/* RENDER */
+function renderStats() {
+  const total = orders.length;
+  const pending = orders.filter(o => o.status === 'pending').length;
+  const active = orders.filter(o => o.status === 'active').length;
+  const completed = orders.filter(o => o.status === 'completed').length;
+  const overdue = orders.filter(isOverdue).length;
+  const dueSoon = orders.filter(o => { if (o.status === 'completed') return false; const d = getDaysLeft(o); return d != null && d >= 0 && d <= 3; }).length;
+  document.getElementById('statsBand').innerHTML = `
+    <div class="stat"><div class="label">Total Orders</div><div class="value">${total}</div><div class="hint">all-time</div></div>
+    <div class="stat"><div class="label">Pending</div><div class="value warn">${pending}</div><div class="hint">awaiting start</div></div>
+    <div class="stat"><div class="label">In Progress</div><div class="value">${active}</div><div class="hint">being sourced</div></div>
+    <div class="stat"><div class="label">Due ≤ 3 days</div><div class="value ${dueSoon? 'warn':''}">${dueSoon}</div><div class="hint">approaching deadline</div></div>
+    <div class="stat"><div class="label">Overdue</div><div class="value ${overdue? 'danger':''}">${overdue}</div><div class="hint">past deadline</div></div>`;
+  document.getElementById('count-all').textContent = total;
+  document.getElementById('count-pending').textContent = pending;
+  document.getElementById('count-active').textContent = active;
+  document.getElementById('count-completed').textContent = completed;
+  document.getElementById('count-overdue').textContent = overdue;
+}
+function renderHead() {
+  const row = document.getElementById('headRow');
+  row.innerHTML = columns.map(c => {
+    if (c.key === 'actions') return `<th style="width:80px"></th>`;
+    const isSorted = sortState.col === c.key;
+    const sortArrow = isSorted ? (sortState.dir === 'asc' ? '↑' : '↓') : '';
+    const hasFilter = columnFilters[c.key];
+    return `<th data-col="${c.key}" ${c.width? 'style="width:'+c.width+'"' : ''}>
+      <div class="th-inner">
+        <span class="col-label" data-sort="${c.key}">${c.label}</span>
+        <span class="sort-indicator ${isSorted? 'active':''}">${sortArrow}</span>
+        <button class="filter-btn ${hasFilter? 'active':''}" data-filter="${c.key}" title="Filter / sort">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
+      </div></th>`;
+  }).join('');
+  row.querySelectorAll('[data-sort]').forEach(el => { el.addEventListener('click', () => { const key = el.dataset.sort; if (sortState.col === key) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc'; else { sortState.col = key; sortState.dir = 'asc'; } render(); }); });
+  row.querySelectorAll('[data-filter]').forEach(el => { el.addEventListener('click', (e) => { e.stopPropagation(); openFilterPopover(el.dataset.filter, el.closest('th')); }); });
+}
+function render() {
+  renderStats();
+  renderHead();
+  const tbody = document.getElementById('ordersBody');
+  const visible = getVisibleOrders();
+  if (!visible.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="${columns.length}">No orders match.<div class="hint">Try clearing filters${role==='admin'?' or creating a new order.':'.'}</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = visible.map(o => {
+    const dl = getDaysLeft(o);
+    const overdue = isOverdue(o);
+    const daysCls = overdue ? 'danger' : (dl != null && dl <= 3 ? 'warn' : '');
+    const statusPill = overdue ? `<span class="status-pill status-overdue">overdue</span>`
+      : o.status === 'completed' ? `<span class="status-pill status-completed">completed</span>`
+      : o.status === 'active' ? `<span class="status-pill status-active">in progress</span>`
+      : `<span class="status-pill status-pending">pending</span>`;
+    const reqTag = { single: '<span class="tag">single</span>', pair: '<span class="tag pair">pair</span>', parcel: '<span class="tag parcel">parcel</span>', layout: '<span class="tag layout">layout</span>' }[o.reqType] || '<span class="tag">—</span>';
+    const dimensions = [o.dimL, o.dimW, o.dimD].filter(Boolean).join(' × ');
+    const daysCellText = o.status === 'completed' ? '—' : (dl === null ? '—' : (dl < 0 ? `${Math.abs(dl)}d late` : `${dl}d`));
+    const attachCount = (o.attachments || []).length;
+    return `<tr class="clickable" data-id="${o.id}">
+      <td class="id-cell">${escapeHtml(o.id)}</td>
+      <td><div class="serif" style="font-style:italic;font-weight:500">${escapeHtml(o.client)}</div>${o.reference ? `<div class="mono" style="font-size:10px;color:var(--muted);margin-top:2px">${escapeHtml(o.reference)}</div>`:''}${attachCount ? `<div style="margin-top:6px"><span class="attach-badge"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>${attachCount}</span></div>` : ''}</td>
+      <td><div class="shape-cell"><div class="shape-svg">${getShapeSvg(o.cut)}</div><div><div class="cut-cell">${escapeHtml(o.cut||'—')}</div>${o.cutGrade ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${escapeHtml(o.cutGrade)}</div>`:''}</div></div></td>
+      <td class="spec"><div class="spec-line"><span class="v">${escapeHtml(o.size||'—')} ct</span></div>${dimensions ? `<div class="spec-line"><span class="v" style="color:var(--muted)">${escapeHtml(dimensions)} mm</span></div>` : ''}</td>
+      <td class="spec"><div class="spec-line"><span class="k">Color</span><span class="v">${escapeHtml(o.color||'—')}</span></div><div class="spec-line"><span class="k">Clar</span><span class="v">${escapeHtml(o.clarity||'—')}</span></div></td>
+      <td class="spec"><div class="spec-line"><span class="k">Max</span><span class="v">${o.weightLimit ? o.weightLimit+' ct' : '—'}</span></div><div class="spec-line"><span class="k">Pcs</span><span class="v">${o.pieces || '—'}</span></div></td>
+      <td class="spec"><span class="v">${escapeHtml(o.fluor||'—')}</span></td>
+      <td>${reqTag}</td>
+      <td class="spec"><span class="v">${fmtDate(o.startDate)}</span></td>
+      <td><div class="deadline"><span class="date">${fmtDate(o.endDate)}</span></div></td>
+      <td><div class="deadline"><span class="days ${daysCls}">${daysCellText}</span></div></td>
+      <td>${statusPill}</td>
+      <td><div class="row-actions">
+        <button data-action="complete" data-id="${o.id}" title="${o.status==='completed'?'Reopen':'Mark complete'}">
+          ${o.status === 'completed' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'}
+        </button>
+        ${role === 'admin' ? `<button data-action="edit" data-id="${o.id}" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>` : ''}
+      </div></td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('tr.clickable').forEach(tr => { tr.addEventListener('click', (e) => { if (e.target.closest('[data-action]')) return; openDetail(tr.dataset.id); }); });
+  tbody.querySelectorAll('[data-action="edit"]').forEach(b => { b.addEventListener('click', e => { e.stopPropagation(); openForm(b.dataset.id); }); });
+  tbody.querySelectorAll('[data-action="complete"]').forEach(b => { b.addEventListener('click', e => { e.stopPropagation(); toggleComplete(b.dataset.id); }); });
+}
+
+/* FILTER POPOVER */
+function openFilterPopover(colKey, thEl) {
+  closeFilterPopover();
+  const col = columns.find(c => c.key === colKey); if (!col) return;
+  const pop = document.createElement('div'); pop.className = 'filter-pop';
+  if (col.type === 'set') {
+    const vals = {};
+    orders.forEach(o => { const v = getColCellKey(o, colKey); if (v === '' || v == null) return; vals[v] = (vals[v] || 0) + 1; });
+    const existing = columnFilters[colKey];
+    const selected = existing ? existing.values : new Set();
+    const entries = Object.entries(vals).sort((a,b)=> a[0].localeCompare(b[0]));
+    pop.innerHTML = `
+      <input type="text" class="fp-search" placeholder="Search values…" />
+      <div class="fp-sort">
+        <button data-s="asc" class="${sortState.col===colKey && sortState.dir==='asc' ? 'active':''}">Sort A→Z</button>
+        <button data-s="desc" class="${sortState.col===colKey && sortState.dir==='desc' ? 'active':''}">Sort Z→A</button>
+      </div>
+      <div class="fp-list">
+        ${entries.map(([v,c]) => `<label class="fp-item"><input type="checkbox" value="${escapeHtml(v)}" ${selected.has(v)?'checked':''} /><span>${escapeHtml(v)}</span><span class="ct">${c}</span></label>`).join('') || '<div style="padding:20px;text-align:center;color:var(--muted);font-size:11px">No values</div>'}
+      </div>
+      <div class="fp-actions"><button class="clear">Clear</button><button class="apply">Apply</button></div>`;
+    pop.querySelector('.fp-search').addEventListener('input', e => { const q = e.target.value.toLowerCase(); pop.querySelectorAll('.fp-item').forEach(it => { it.style.display = it.textContent.toLowerCase().includes(q) ? '' : 'none'; }); });
+    pop.querySelectorAll('.fp-sort button').forEach(b => { b.addEventListener('click', () => { sortState.col = colKey; sortState.dir = b.dataset.s; closeFilterPopover(); render(); }); });
+    pop.querySelector('.apply').addEventListener('click', () => { const checked = [...pop.querySelectorAll('input[type=checkbox]:checked')].map(i=>i.value); if (!checked.length) delete columnFilters[colKey]; else columnFilters[colKey] = { type:'set', values: new Set(checked) }; closeFilterPopover(); render(); });
+    pop.querySelector('.clear').addEventListener('click', () => { delete columnFilters[colKey]; closeFilterPopover(); render(); });
+  } else if (col.type === 'range' || col.type === 'range-date') {
+    const existing = columnFilters[colKey] || {};
+    const isDate = col.type === 'range-date';
+    pop.innerHTML = `
+      <div class="fp-sort">
+        <button data-s="asc" class="${sortState.col===colKey && sortState.dir==='asc' ? 'active':''}">Sort ↑</button>
+        <button data-s="desc" class="${sortState.col===colKey && sortState.dir==='desc' ? 'active':''}">Sort ↓</button>
+      </div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);margin-bottom:6px">Range</div>
+      <div class="fp-range"><input type="${isDate?'date':'number'}" step="any" placeholder="min" value="${existing.min ?? ''}" /><input type="${isDate?'date':'number'}" step="any" placeholder="max" value="${existing.max ?? ''}" /></div>
+      <div class="fp-actions"><button class="clear">Clear</button><button class="apply">Apply</button></div>`;
+    pop.querySelectorAll('.fp-sort button').forEach(b => { b.addEventListener('click', () => { sortState.col = colKey; sortState.dir = b.dataset.s; closeFilterPopover(); render(); }); });
+    pop.querySelector('.apply').addEventListener('click', () => { const [minEl, maxEl] = pop.querySelectorAll('.fp-range input'); const min = minEl.value, max = maxEl.value; if (!min && !max) delete columnFilters[colKey]; else columnFilters[colKey] = { type: col.type, min: isDate ? (min||null) : (min ? parseFloat(min) : null), max: isDate ? (max||null) : (max ? parseFloat(max) : null) }; closeFilterPopover(); render(); });
+    pop.querySelector('.clear').addEventListener('click', () => { delete columnFilters[colKey]; closeFilterPopover(); render(); });
+  } else return;
+  thEl.appendChild(pop);
+  activeFilterPop = pop;
+  setTimeout(() => { const rect = pop.getBoundingClientRect(); if (rect.right > window.innerWidth - 10) { pop.style.left = 'auto'; pop.style.right = '0'; } }, 0);
+  setTimeout(() => { document.addEventListener('click', onOutsideFilter, { once: true }); }, 0);
+}
+function onOutsideFilter(e) { if (!activeFilterPop) return; if (!activeFilterPop.contains(e.target) && !e.target.closest('[data-filter]')) closeFilterPopover(); else document.addEventListener('click', onOutsideFilter, { once: true }); }
+function closeFilterPopover() { if (activeFilterPop) { activeFilterPop.remove(); activeFilterPop = null; } }
+
+/* SHAPE GRID */
+function renderShapeGrid(selected) {
+  const grid = document.getElementById('shapeGrid');
+  grid.innerHTML = SHAPES.map(s => `<div class="shape-card ${selected === s.key ? 'active':''}" data-key="${escapeHtml(s.key)}">${s.svg}<div class="name">${escapeHtml(s.short)}</div></div>`).join('');
+  grid.querySelectorAll('.shape-card').forEach(c => { c.addEventListener('click', () => { grid.querySelectorAll('.shape-card').forEach(x => x.classList.remove('active')); c.classList.add('active'); document.querySelector('[name="cut"]').value = c.dataset.key; }); });
+}
+
+/* ATTACHMENTS */
+function renderAttachList() {
+  const box = document.getElementById('attachList');
+  if (!pendingAttachments.length) { box.innerHTML = `<div style="font-size:11px;color:var(--muted);padding:8px 0;font-style:italic">No attachments yet.</div>`; return; }
+  box.innerHTML = pendingAttachments.map((a, i) => `<div class="attach-item">
+    <div class="attach-icon ${attachIconClass(a)}">${attachLabel(a)}</div>
+    <div class="attach-name">${a.type === 'link' ? `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.name || a.url)}</a>` : escapeHtml(a.name)}</div>
+    ${a.size ? `<div class="attach-size">${fileSize(a.size)}</div>` : ''}
+    <button type="button" class="attach-remove" data-idx="${i}" title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>`).join('');
+  box.querySelectorAll('.attach-remove').forEach(b => { b.addEventListener('click', () => { pendingAttachments.splice(parseInt(b.dataset.idx), 1); renderAttachList(); }); });
+}
+function addFileAttachments(files) {
+  const MAX = 2 * 1024 * 1024;
+  const readers = [];
+  [...files].forEach(f => {
+    if (f.size > MAX) { toast(`"${f.name}" is over 2 MB — add as a link instead.`, 'warn'); return; }
+    readers.push(new Promise(res => {
+      const r = new FileReader();
+      r.onload = () => { pendingAttachments.push({ id: 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), type: 'file', name: f.name, mime: f.type, size: f.size, data: r.result }); res(); };
+      r.readAsDataURL(f);
+    }));
+  });
+  Promise.all(readers).then(renderAttachList);
+}
+function addLinkAttachment(label, url) {
+  if (!url) return;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  pendingAttachments.push({ id: 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), type: 'link', name: label || url, url: url });
+  renderAttachList();
+}
+
+/* FORM */
+function openForm(id) {
+  if (role !== 'admin') return;
+  editingId = id || null;
+  const form = document.getElementById('orderForm');
+  form.reset();
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.req-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('formTitle').textContent = id ? 'Edit Order' : 'New Order';
+  document.getElementById('deleteOrderBtn').style.display = id ? 'inline-flex' : 'none';
+  document.getElementById('linkInputRow').style.display = 'none';
+  if (id) {
+    const o = orders.find(x => x.id === id); if (!o) return;
+    Object.keys(o).forEach(k => { const el = form.elements[k]; if (el && el.type !== 'hidden' && el.type !== 'file') el.value = o[k] ?? ''; });
+    form.elements.reqType.value = o.reqType || 'single';
+    document.querySelector(`.req-card[data-type="${o.reqType||'single'}"]`)?.classList.add('active');
+    form.elements.cut.value = o.cut || '';
+    renderShapeGrid(o.cut);
+    ['color','clarity'].forEach(k => {
+      form.elements[k].value = o[k] || '';
+      const sel = new Set((o[k]||'').split(',').filter(Boolean));
+      document.querySelectorAll(`[data-multichip="${k}"] .chip`).forEach(ch => { if (sel.has(ch.dataset.v)) ch.classList.add('active'); });
+    });
+    pendingAttachments = JSON.parse(JSON.stringify(o.attachments || []));
+  } else {
+    const today = new Date(); const two_weeks = new Date(); two_weeks.setDate(today.getDate()+14);
+    form.elements.startDate.value = today.toISOString().slice(0,10);
+    form.elements.endDate.value = two_weeks.toISOString().slice(0,10);
+    form.elements.reqType.value = 'single';
+    document.querySelector('.req-card[data-type="single"]').classList.add('active');
+    renderShapeGrid(null);
+    pendingAttachments = [];
+  }
+  renderAttachList();
+  document.getElementById('formBackdrop').classList.add('open');
+}
+function closeForm() { document.getElementById('formBackdrop').classList.remove('open'); editingId = null; pendingAttachments = []; }
+async function saveFormData() {
+  const form = document.getElementById('orderForm');
+  const fd = new FormData(form);
+  const o = {};
+  for (const [k,v] of fd.entries()) o[k] = v;
+  if (!o.client || !o.cut || !o.startDate || !o.endDate) { toast('Please fill client, shape, start and deadline.', 'warn'); return; }
+  o.weightLimit = o.weightLimit ? parseFloat(o.weightLimit) : null;
+  o.pieces = o.pieces ? parseInt(o.pieces) : null;
+  o.attachments = [...pendingAttachments];
+  let saved;
+  if (editingId) {
+    const idx = orders.findIndex(x => x.id === editingId);
+    if (idx >= 0) { saved = { ...orders[idx], ...o, id: editingId }; orders[idx] = saved; }
+  } else {
+    o.id = nextId(); o.createdAt = Date.now(); orders.unshift(o); saved = o;
+  }
+  saveLocal();
+  closeForm();
+  render();
+  toast(editingId ? 'Order updated' : 'Order saved');
+  if (syncEnabled) await pushToSheet(editingId ? 'update' : 'create', { order: saved });
+}
+async function deleteOrder(id) {
+  if (role !== 'admin') return;
+  if (!confirm('Delete this order permanently?')) return;
+  orders = orders.filter(o => o.id !== id);
+  saveLocal(); closeForm(); closeDetail(); render();
+  toast('Order deleted');
+  if (syncEnabled) await pushToSheet('delete', { id });
+}
+async function toggleComplete(id) {
+  const o = orders.find(x => x.id === id); if (!o) return;
+  if (o.status === 'completed') { o.status = 'active'; toast(`${o.id} reopened`); }
+  else { o.status = 'completed'; o.completedAt = Date.now(); toast(`${o.id} marked complete`); }
+  saveLocal(); render();
+  if (syncEnabled) await pushToSheet('update', { order: o });
+}
+
+/* DETAIL VIEW */
+function renderDetailAttachments(atts) {
+  if (!atts || !atts.length) return `<div style="font-size:11px;color:var(--muted);padding:4px 0;font-style:italic">No attachments</div>`;
+  return `<div class="attach-list">${atts.map(a => {
+    const href = a.type === 'link' ? a.url : a.data;
+    return `<div class="attach-item">
+      <div class="attach-icon ${attachIconClass(a)}">${attachLabel(a)}</div>
+      <div class="attach-name"><a href="${escapeHtml(href)}" target="_blank" rel="noopener" ${a.type==='file'?`download="${escapeHtml(a.name)}"`:''}>${escapeHtml(a.name || a.url)}</a></div>
+      ${a.size ? `<div class="attach-size">${fileSize(a.size)}</div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+function openDetail(id) {
+  const o = orders.find(x => x.id === id); if (!o) return;
+  document.getElementById('detailTitle').textContent = o.cut + ' — ' + o.client;
+  document.getElementById('detailSub').textContent = o.id + (o.reference ? ' · ' + o.reference : '');
+  const dl = getDaysLeft(o);
+  const overdue = isOverdue(o);
+  const statusHtml = overdue ? '<span class="status-pill status-overdue">overdue</span>' : o.status === 'completed' ? '<span class="status-pill status-completed">completed</span>' : o.status === 'active' ? '<span class="status-pill status-active">in progress</span>' : '<span class="status-pill status-pending">pending</span>';
+  const dims = [o.dimL, o.dimW, o.dimD].filter(Boolean).join(' × ');
+  const daysText = o.status === 'completed' ? 'completed' : (dl == null ? '—' : (dl < 0 ? `${Math.abs(dl)} days overdue` : `${dl} days remaining`));
+  const shape = shapeByKey[o.cut] || shapeByKey['Other'];
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-shape-hero">
+      <div style="width:64px;height:64px">${shape.svg}</div>
+      <div class="meta"><div class="cut-name">${escapeHtml(o.cut||'—')}</div><div class="cut-sub">${escapeHtml(o.reqType||'')} · ${escapeHtml(o.cutGrade||'—')}</div></div>
+      <div style="margin-left:auto;text-align:right"><div>${statusHtml}</div><div class="mono" style="font-size:12px;margin-top:6px;color:${overdue?'var(--danger)':dl!=null&&dl<=3?'var(--warn)':'var(--ink-soft)'}">${daysText}</div></div>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-block"><h4>Stone</h4>
+        <div class="detail-row"><span class="k">Cut</span><span class="v prose">${escapeHtml(o.cut||'—')}</span></div>
+        <div class="detail-row"><span class="k">Cut grade</span><span class="v">${escapeHtml(o.cutGrade||'—')}</span></div>
+        <div class="detail-row"><span class="k">Polish/Sym</span><span class="v">${escapeHtml(o.polishSym||'—')}</span></div>
+        <div class="detail-row"><span class="k">Size</span><span class="v">${escapeHtml(o.size||'—')} ct</span></div>
+        <div class="detail-row"><span class="k">Dimensions</span><span class="v">${dims ? dims+' mm' : '—'}</span></div>
+        <div class="detail-row"><span class="k">Tolerance</span><span class="v">${escapeHtml(o.tolerance||'—')}</span></div>
+      </div>
+      <div class="detail-block"><h4>Quality</h4>
+        <div class="detail-row"><span class="k">Color</span><span class="v">${escapeHtml(o.color||'—')}</span></div>
+        <div class="detail-row"><span class="k">Clarity</span><span class="v">${escapeHtml(o.clarity||'—')}</span></div>
+        <div class="detail-row"><span class="k">Fluorescence</span><span class="v">${escapeHtml(o.fluor||'—')}</span></div>
+        <div class="detail-row"><span class="k">Certificate</span><span class="v">${escapeHtml(o.cert||'—')}</span></div>
+        <div class="detail-row"><span class="k">Weight limit</span><span class="v">${o.weightLimit? o.weightLimit+' ct':'—'}</span></div>
+        <div class="detail-row"><span class="k">Pieces</span><span class="v">${o.pieces||'—'}</span></div>
+      </div>
+      <div class="detail-block"><h4>Order</h4>
+        <div class="detail-row"><span class="k">Client</span><span class="v prose">${escapeHtml(o.client||'—')}</span></div>
+        <div class="detail-row"><span class="k">Reference</span><span class="v">${escapeHtml(o.reference||'—')}</span></div>
+        <div class="detail-row"><span class="k">Priority</span><span class="v">${escapeHtml(o.priority||'—')}</span></div>
+        <div class="detail-row"><span class="k">Requirement</span><span class="v">${escapeHtml(o.reqType||'—')}</span></div>
+      </div>
+      <div class="detail-block"><h4>Timeline</h4>
+        <div class="detail-row"><span class="k">Start date</span><span class="v">${fmtDate(o.startDate)}</span></div>
+        <div class="detail-row"><span class="k">Deadline</span><span class="v">${fmtDate(o.endDate)}</span></div>
+        <div class="detail-row"><span class="k">Duration</span><span class="v">${o.startDate && o.endDate ? daysBetween(o.startDate, o.endDate) + ' days' : '—'}</span></div>
+      </div>
+      ${o.notes ? `<div class="detail-block" style="grid-column:1/-1"><h4>Notes & Conditions</h4><div class="detail-row"><span class="v notes">${escapeHtml(o.notes).replace(/\n/g,'<br>')}</span></div></div>`:''}
+      <div class="detail-block" style="grid-column:1/-1"><h4>Supporting Files & Links</h4>${renderDetailAttachments(o.attachments)}</div>
+    </div>`;
+  const toggleBtn = document.getElementById('detailToggleStatus');
+  toggleBtn.textContent = o.status === 'completed' ? 'Reopen Order' : 'Mark Complete';
+  toggleBtn.onclick = () => { toggleComplete(o.id); closeDetail(); };
+  document.getElementById('detailEdit').onclick = () => { closeDetail(); openForm(o.id); };
+  document.getElementById('detailDelete').onclick = () => deleteOrder(o.id);
+  document.getElementById('detailBackdrop').classList.add('open');
+}
+function closeDetail() { document.getElementById('detailBackdrop').classList.remove('open'); }
+
+/* EXPORT */
+function exportData() {
+  const blob = new Blob([JSON.stringify(orders, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `diamond-orders-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('Backup downloaded');
+}
+
+/* WIRING */
+document.getElementById('gateEnter').addEventListener('click', tryLogin);
+document.getElementById('gatePass').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+const savedRole = sessionStorage.getItem(SESSION_KEY);
+if (savedRole === 'admin' || savedRole === 'viewer') { role = savedRole; enterApp(); }
+
+document.getElementById('logoutBtn').addEventListener('click', logout);
+document.getElementById('addOrderBtn').addEventListener('click', () => openForm());
+document.getElementById('closeForm').addEventListener('click', closeForm);
+document.getElementById('cancelForm').addEventListener('click', closeForm);
+document.getElementById('saveOrder').addEventListener('click', saveFormData);
+document.getElementById('deleteOrderBtn').addEventListener('click', () => editingId && deleteOrder(editingId));
+document.getElementById('closeDetail').addEventListener('click', closeDetail);
+document.getElementById('refreshBtn').addEventListener('click', () => loadFromSheet(true));
+document.getElementById('exportBtn').addEventListener('click', exportData);
+
+document.getElementById('globalSearch').addEventListener('input', e => { globalQuery = e.target.value; render(); });
+document.getElementById('clearFilters').addEventListener('click', () => { columnFilters = {}; globalQuery = ''; document.getElementById('globalSearch').value = ''; render(); });
+
+document.querySelectorAll('.tab').forEach(t => { t.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('active')); t.classList.add('active'); currentTab = t.dataset.tab; render(); }); });
+document.querySelectorAll('.req-card').forEach(c => { c.addEventListener('click', () => { document.querySelectorAll('.req-card').forEach(x => x.classList.remove('active')); c.classList.add('active'); document.querySelector('[name="reqType"]').value = c.dataset.type; }); });
+document.querySelectorAll('[data-multichip]').forEach(wrap => { const name = wrap.dataset.multichip; wrap.querySelectorAll('.chip').forEach(ch => { ch.addEventListener('click', () => { ch.classList.toggle('active'); const actives = [...wrap.querySelectorAll('.chip.active')].map(x => x.dataset.v); document.querySelector(`[name="${name}"]`).value = actives.join(','); }); }); });
+
+document.getElementById('attachFileBtn').addEventListener('click', () => document.getElementById('attachFileInput').click());
+document.getElementById('attachFileInput').addEventListener('change', e => { if (e.target.files.length) addFileAttachments(e.target.files); e.target.value = ''; });
+document.getElementById('attachLinkBtn').addEventListener('click', () => { const row = document.getElementById('linkInputRow'); row.style.display = 'flex'; document.getElementById('linkUrl').focus(); });
+document.getElementById('linkCancelBtn').addEventListener('click', () => { document.getElementById('linkInputRow').style.display = 'none'; document.getElementById('linkLabel').value = ''; document.getElementById('linkUrl').value = ''; });
+document.getElementById('linkAddBtn').addEventListener('click', () => { const label = document.getElementById('linkLabel').value.trim(); const url = document.getElementById('linkUrl').value.trim(); if (!url) { toast('Enter a URL', 'warn'); return; } addLinkAttachment(label, url); document.getElementById('linkLabel').value = ''; document.getElementById('linkUrl').value = ''; document.getElementById('linkInputRow').style.display = 'none'; });
+
+document.getElementById('formBackdrop').addEventListener('click', e => { if (e.target.id === 'formBackdrop') closeForm(); });
+document.getElementById('detailBackdrop').addEventListener('click', e => { if (e.target.id === 'detailBackdrop') closeDetail(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeForm(); closeDetail(); closeFilterPopover(); } });
+</script>
+</body>
+</html>
